@@ -1,14 +1,14 @@
-const { sqlBase } = require('../database/connection/connection.js')
+const { sqlBase } = require('../database/connection/connectionSQL.js')
 const bcrypt = require('bcrypt')
 
 const registration = async (req, res) => {
     let { Username, Login, Password } = req.body
-    const objRes = await sqlBase.query(`SELECT * FROM public."Users" Where "Login" = $1`, [])
+    const objRes = await sqlBase.query(`SELECT * FROM public."Users" Where "Login" = $1`, [Login])
     const foundUser = Object.keys(objRes.rows).length === 1
     if (foundUser)
         return res.status(500).json({ error: "Пользователь существует" })
 
-    let hashPassword = bcrypt.hashSync(Password, salt)
+    let hashPassword = bcrypt.hashSync(Password, 8)
 
     sqlBase.query(`INSERT INTO public."Users"("Username", "Login", "Password") VALUES ($1, $2, $3)`,
         [Username, Login, hashPassword])
@@ -17,13 +17,13 @@ const registration = async (req, res) => {
 
 const login = async (req, res) => {
     let { Login, Password } = req.body
-    const objRes = await (await sqlBase.query(`Select "Password" from public."Users" Where "Login" like $1 `, [Login])).rows
-    const loginExists = Object.keys(objRes).length === 0
+    const objRes = await sqlBase.query(`Select "Password" from public."Users" Where "Login" like $1 `, [Login])
+    const loginExists = Object.keys(objRes.rows).length === 0
 
     if (loginExists)
         return res.status(500).json({ error: "Некорекнтый логин/пароль" })
 
-    let comparePassword = bcrypt.compareSync(Password, objRes[0].Password)
+    let comparePassword = bcrypt.compareSync(Password, objRes.rows[0].Password)
 
     if (!comparePassword)
         return res.status(500).json({ error: "Некорекнтый логин/пароль" })
